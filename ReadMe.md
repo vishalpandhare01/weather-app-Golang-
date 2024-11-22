@@ -81,3 +81,60 @@ Once all fetching goroutines are done (when wg.Wait() returns), the anonymous go
 The main goroutine, which is reading from the channel in a for range loop, will detect that the channel is closed and terminate its loop, allowing the program to exit gracefully.
 
 In summary, closing the channel after all goroutines are done is essential for proper resource management and ensuring that the reading side can finish its operation without waiting indefinitely.
+
+
+
+/*
+concurrency is feture in goalng to execute multiple task concurrently using gorutine and chnnel
+go key word we called goroutine which help to exucute task concurrently
+channel we use to communicate btn goroutine
+eg. read excel data at one time
+*/
+
+package main
+
+import (
+	"fmt"
+	"sync"
+	"time"
+)
+
+// Function to print numbers using goroutines and channels
+func printNumber(ch chan int) {
+	var w sync.WaitGroup // WaitGroup to synchronize goroutines
+
+	// Loop to launch 10 goroutines
+	for i := 0; i < 10; i++ {
+		w.Add(1) // Add 1 to the WaitGroup counter for each goroutine
+
+		// Launching a goroutine to send a number to the channel after a delay
+		go func(i int) { // Pass 'i' to the goroutine to avoid race condition
+			defer w.Done() // Decrement the WaitGroup counter when the goroutine finishes
+
+			// Simulate some work with a delay
+			time.Sleep(500 * time.Millisecond)
+
+			// Send the value of 'i' to the channel
+			ch <- i
+		}(i) // Pass the current value of 'i' to the goroutine
+	}
+
+	// Launch a goroutine to close the channel once all goroutines are done
+	go func() {
+		w.Wait()  // Wait until all goroutines are finished
+		close(ch) // Close the channel to signal that no more data will be sent
+	}()
+}
+
+func main() {
+	ch := make(chan int) // Create an unbuffered channel to communicate with goroutines
+
+	printNumber(ch) // Call the function that launches goroutines
+
+	// Loop to receive values from the channel until it is closed
+	for i := range ch {
+		// Print the values received from the channel
+		fmt.Println("here", i)
+	}
+}
+
